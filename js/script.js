@@ -2,7 +2,7 @@ const initSize = 4
 const nest = 4
 const size = initSize ** nest
 
-const duration = 2999
+const duration = 5999
 
 let isDark = false
 
