@@ -66,6 +66,7 @@ const draw = _ => {
 
     initTbl[y][x] = 1 - initTbl[y][x]
 
+    $cvsRenderCur.stop()
     $cvsRenderCur.fadeOut(11)
     $cvsRenderCur.fadeIn(599)
 
