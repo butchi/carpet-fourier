@@ -1,4 +1,5 @@
 import ndarray from "ndarray"
+// @ts-ignore
 import fft from "ndarray-fft"
 
 import "./style.css"
@@ -63,8 +64,6 @@ const initialize = () => {
   }
 }
 
-console.log("initTbl", initTbl)
-
 initialize()
 
 const resizeCanvas = () => {
@@ -117,9 +116,7 @@ const draw = () => {
   const ndI = ndarray(im, [size, size])
 
   // 2D FFT (インプレース)
-  console.time("fft")
   fft(1, ndR, ndI)
-  console.timeEnd("fft")
 
   let fftMaxVal = 0
   for (let i = 0; i < size ** 2; i++) {
