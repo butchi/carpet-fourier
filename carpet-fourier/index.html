@@ -7,7 +7,14 @@
     <title>Vite + TS</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <main>
+        <canvas class="hidden" id="cvsOrig"></canvas>
+        <canvas class="hidden" id="cvsCur"></canvas>
+        <canvas class="render" id="cvsRenderPrev"></canvas>
+        <canvas class="render" id="cvsRenderCur"></canvas>
+      </main>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
