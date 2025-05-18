@@ -7,7 +7,7 @@ import "./style.css"
 const initSize = 8
 const nest = 4
 const size = initSize ** nest
-const duration = 5999
+const duration = 3820
 
 let isDark = false
 let timeout: number
@@ -229,7 +229,7 @@ const draw = () => {
     ctxRenderCur,
     prevImageData,
     newImageData,
-    800, // フェード時間(ms)
+    1000, // フェード時間(ms)
     () => {
       prevImageData = newImageData
       timeout = setTimeout(draw, duration)
@@ -246,6 +246,7 @@ cvsRenderCurElm.onclick = () => {
 
 globalThis.onresize = () => {
   resizeCanvas()
+  draw()
 }
 resizeCanvas()
 draw()
