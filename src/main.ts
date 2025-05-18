@@ -4,13 +4,14 @@ import fft from "ndarray-fft"
 
 import "./style.css"
 
-const initSize = 4
+const initSize = 8
 const nest = 4
 const size = initSize ** nest
 const duration = 5999
 
 let isDark = false
 let timeout: number
+let prevImageData: ImageData | null = null
 
 const re = new Float32Array(size ** 2)
 const im = new Float32Array(size ** 2)
@@ -20,9 +21,6 @@ const fftCurCvsElm = document.getElementById("cvsCur") as HTMLCanvasElement
 
 const cvsRenderCurElm = document.getElementById(
   "cvsRenderCur"
-) as HTMLCanvasElement
-const cvsRenderPrevElm = document.getElementById(
-  "cvsRenderPrev"
 ) as HTMLCanvasElement
 
 const dpr = window.devicePixelRatio || 1
@@ -81,7 +79,6 @@ const setRenderCanvasSize = (canvas: HTMLCanvasElement) => {
 
 const resizeCanvas = () => {
   setRenderCanvasSize(cvsRenderCurElm)
-  setRenderCanvasSize(cvsRenderPrevElm)
 }
 
 // フラクタルパターンの生成（ランダム要素の更新含む）
@@ -162,7 +159,7 @@ const updateOriginalCanvas = (fractalTbl: number[][]) => {
 const updateFFTCanvas = () => {
   const imgData = ctxFftCur.getImageData(0, 0, size, size)
   const ampLi = [Math.random(), Math.random(), Math.random()]
-  updateCanvasData(ctxFftCur, imgData, (x, y, p) => {
+  updateCanvasData(ctxFftCur, imgData, (_x, _y, p) => {
     const amplitude = Math.sqrt(re[p] ** 2 + im[p] ** 2)
     const base = isDark ? 0 : 255
     const sign = isDark ? 1 : -1
@@ -175,13 +172,36 @@ const updateFFTCanvas = () => {
   })
 }
 
+// フェードアニメーション
+const fadeTransition = (ctx: CanvasRenderingContext2D, from: ImageData, to: ImageData, duration: number, callback: () => void) => {
+  const width = from.width
+  const height = from.height
+  let start: number | null = null
+  const temp = ctx.createImageData(width, height)
+
+  function step(ts: number) {
+    if (!start) start = ts
+    const t = Math.min((ts - start) / duration, 1)
+    for (let i = 0; i < from.data.length; i += 4) {
+      for (let c = 0; c < 4; c++) {
+        temp.data[i + c] = from.data[i + c] * (1 - t) + to.data[i + c] * t
+      }
+    }
+    ctx.putImageData(temp, 0, 0)
+    if (t < 1) {
+      requestAnimationFrame(step)
+    } else {
+      callback()
+    }
+  }
+  requestAnimationFrame(step)
+}
+
 // レンダリング用CanvasにFFTパターンを適用
 const renderPattern = () => {
   resizeCanvas()
   const ctxRenderCur = cvsRenderCurElm.getContext("2d")
-  const ctxRenderPrev = cvsRenderPrevElm.getContext("2d")
   if (!ctxRenderCur) throw new Error("cvsRenderCur context is null")
-  if (!ctxRenderPrev) throw new Error("cvsRenderPrev context is null")
 
   const patternCur = ctxRenderCur.createPattern(fftCurCvsElm, "repeat")
   if (!patternCur) throw new Error("Failed to create pattern for fftCurCvsElm")
@@ -191,12 +211,30 @@ const renderPattern = () => {
 
 // メイン描画処理（再帰的タイマーで更新）
 const draw = () => {
+  const ctxRenderCur = cvsRenderCurElm.getContext("2d")
+  if (!ctxRenderCur) throw new Error("cvsRenderCur context is null")
+  // 前回の内容を保存
+  if (!prevImageData) {
+    prevImageData = ctxRenderCur.getImageData(0, 0, cvsRenderCurElm.width, cvsRenderCurElm.height)
+  }
   const fractalTbl = generateFractal()
   performFFT()
   updateOriginalCanvas(fractalTbl)
   updateFFTCanvas()
   renderPattern()
-  timeout = setTimeout(draw, duration)
+  // 新しい内容を取得
+  const newImageData = ctxRenderCur.getImageData(0, 0, cvsRenderCurElm.width, cvsRenderCurElm.height)
+  // フェード
+  fadeTransition(
+    ctxRenderCur,
+    prevImageData,
+    newImageData,
+    800, // フェード時間(ms)
+    () => {
+      prevImageData = newImageData
+      timeout = setTimeout(draw, duration)
+    }
+  )
 }
 
 // クリックイベントは初期化時に一度だけ設定
