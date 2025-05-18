@@ -4,8 +4,8 @@ import fft from "ndarray-fft"
 
 import "./style.css"
 
-const initSize = 8
-const nest = 4
+const initSize = 4
+const nest = 5
 const size = initSize ** nest
 const duration = 3820
 
