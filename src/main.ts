@@ -7,215 +7,207 @@ import "./style.css"
 const initSize = 4
 const nest = 4
 const size = initSize ** nest
-
 const duration = 5999
 
 let isDark = false
-
 let timeout: number
 
 const re = new Float32Array(size ** 2)
 const im = new Float32Array(size ** 2)
 
-const origCvsElm = document.getElementById("cvsOrig")
-const fftCurCvsElm = document.getElementById("cvsCur")
+const origCvsElm = document.getElementById("cvsOrig") as HTMLCanvasElement
+const fftCurCvsElm = document.getElementById("cvsCur") as HTMLCanvasElement
+
+const cvsRenderCurElm = document.getElementById(
+  "cvsRenderCur"
+) as HTMLCanvasElement
+const cvsRenderPrevElm = document.getElementById(
+  "cvsRenderPrev"
+) as HTMLCanvasElement
 
 const dpr = window.devicePixelRatio || 1
 
-if (!(origCvsElm instanceof HTMLCanvasElement)) {
+if (!(origCvsElm instanceof HTMLCanvasElement))
   throw new Error("cvsOrig is not a canvas element")
-}
-if (!(fftCurCvsElm instanceof HTMLCanvasElement)) {
+if (!(fftCurCvsElm instanceof HTMLCanvasElement))
   throw new Error("cvsCur is not a canvas element")
+
+// 固定サイズのキャンバス初期化
+const setFixedCanvasSize = (canvas: HTMLCanvasElement, size: number) => {
+  canvas.width = size
+  canvas.height = size
+  canvas.style.width = `${size}px`
+  canvas.style.height = `${size}px`
 }
 
-origCvsElm.width = size
-origCvsElm.height = size
-origCvsElm.style.width = `${size}px`
-origCvsElm.style.height = `${size}px`
-
-fftCurCvsElm.width = size
-fftCurCvsElm.height = size
-fftCurCvsElm.style.width = `${size}px`
-fftCurCvsElm.style.height = `${size}px`
+setFixedCanvasSize(origCvsElm, size)
+setFixedCanvasSize(fftCurCvsElm, size)
 
 const ctxOrig = origCvsElm.getContext("2d")
 const ctxFftCur = fftCurCvsElm.getContext("2d")
 
-if (!ctxOrig) {
-  throw new Error("cvsOrig context is null")
-}
-if (!ctxFftCur) {
-  throw new Error("cvsCur context is null")
-}
+if (!ctxOrig) throw new Error("cvsOrig context is null")
+if (!ctxFftCur) throw new Error("cvsCur context is null")
 
-const initTbl = [...Array(initSize)].map(_ => {
-  return Array(initSize).fill(0)
-})
+// 初期テーブル生成
+const initTbl: number[][] = Array.from({ length: initSize }, () =>
+  Array(initSize).fill(0)
+)
 
 const initialize = () => {
   let total = 0
-
-  initTbl.forEach((row, y) => {
-    row.forEach((_col, x) => {
+  for (let y = 0; y < initSize; y++) {
+    for (let x = 0; x < initSize; x++) {
       const val = Math.floor(Math.random() * 2)
       initTbl[y][x] = val
       total += val
-    })
-  })
-
+    }
+  }
   if (total <= 5) {
     initialize()
   }
 }
-
 initialize()
 
-const resizeCanvas = () => {
-  const w = globalThis.innerWidth
-  const h = globalThis.innerHeight
-  const cvsRenderCurElm = document.getElementById(
-    "cvsRenderCur"
-  ) as HTMLCanvasElement
-  const cvsRenderPrevElm = document.getElementById(
-    "cvsRenderPrev"
-  ) as HTMLCanvasElement
-  if (cvsRenderCurElm) {
-    cvsRenderCurElm.width = w * dpr
-    cvsRenderCurElm.height = h * dpr
-    cvsRenderCurElm.style.width = `${w}px`
-    cvsRenderCurElm.style.height = `${h}px`
-  }
-  if (cvsRenderPrevElm) {
-    cvsRenderPrevElm.width = w * dpr
-    cvsRenderPrevElm.height = h * dpr
-    cvsRenderPrevElm.style.width = `${w}px`
-    cvsRenderPrevElm.style.height = `${h}px`
-  }
+// レンダリング用Canvasのサイズ設定（ウィンドウサイズに合わせる）
+const setRenderCanvasSize = (canvas: HTMLCanvasElement) => {
+  const w = window.innerWidth
+  const h = window.innerHeight
+  canvas.width = w * dpr
+  canvas.height = h * dpr
+  canvas.style.width = `${w}px`
+  canvas.style.height = `${h}px`
 }
 
-const draw = () => {
-  const x = Math.floor(Math.random() * 4)
-  const y = Math.floor(Math.random() * 4)
+const resizeCanvas = () => {
+  setRenderCanvasSize(cvsRenderCurElm)
+  setRenderCanvasSize(cvsRenderPrevElm)
+}
 
-  initTbl[y][x] = 1 - initTbl[y][x]
-
-  const fractalTbl = [...Array(size)].map(_ => Array(size).fill(0))
+// フラクタルパターンの生成（ランダム要素の更新含む）
+const generateFractal = (): number[][] => {
+  const fractalTbl: number[][] = Array.from({ length: size }, () =>
+    Array(size).fill(0)
+  )
+  // initTblのランダムなセルを反転
+  const randX = Math.floor(Math.random() * initSize)
+  const randY = Math.floor(Math.random() * initSize)
+  initTbl[randY][randX] = 1 - initTbl[randY][randX]
 
   let p = 0
-
   for (let j = 0; j < size; j++) {
     for (let i = 0; i < size; i++) {
-      fractalTbl[j][i] = 1
+      let val = 1
       for (let n = 0; n < nest; n++) {
-        fractalTbl[j][i] *=
+        val *=
           initTbl[Math.floor(j / Math.pow(initSize, n)) % initSize][
             Math.floor(i / Math.pow(initSize, n)) % initSize
           ]
-
-        re[p] = fractalTbl[j][i]
-        im[p] = 0
-
-        p++
       }
+      fractalTbl[j][i] = val
+      re[p] = val
+      im[p] = 0
+      p++
     }
   }
+  return fractalTbl
+}
 
+// FFT実行と正規化
+const performFFT = () => {
   const ndR = ndarray(re, [size, size])
   const ndI = ndarray(im, [size, size])
-
-  // 2D FFT (インプレース)
   fft(1, ndR, ndI)
-
   let fftMaxVal = 0
   for (let i = 0; i < size ** 2; i++) {
     const val = Math.log(Math.sqrt(re[i] ** 2 + im[i] ** 2))
     fftMaxVal = Math.max(fftMaxVal, val)
   }
+  for (let i = 0; i < size ** 2; i++) {
+    re[i] /= fftMaxVal
+    im[i] /= fftMaxVal
+  }
+}
 
-  re.forEach((val, i) => {
-    re[i] = val / fftMaxVal
-  })
-  im.forEach((val, i) => {
-    im[i] = val / fftMaxVal
-  })
-
-  const imgDataOrig = ctxOrig.getImageData(0, 0, size, size)
-  const imgDataFftCur = ctxFftCur.getImageData(0, 0, size, size)
-
-  const ampLi = [Math.random(), Math.random(), Math.random()]
-
-  let i = 0
-  p = 0
+// 共通のピクセルデータ更新関数
+const updateCanvasData = (
+  ctx: CanvasRenderingContext2D,
+  imageData: ImageData,
+  dataFunc: (x: number, y: number, p: number) => number[]
+) => {
+  let idx = 0
+  let p = 0
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
+      const colors = dataFunc(x, y, p)
       for (let c = 0; c < 4; c++) {
-        if (c < 3) {
-          imgDataOrig.data[i] = 255 - 255 * fractalTbl[y][x]
-          imgDataFftCur.data[i] =
-            (isDark ? 0 : 255) +
-            (isDark ? 1 : -1) *
-              255 *
-              ampLi[c] *
-              (re[p] * re[p] + im[p] * im[p]) ** 0.5
-        } else {
-          imgDataOrig.data[i] = 255
-          imgDataFftCur.data[i] = 255
-        }
-
-        i++
+        imageData.data[idx++] = colors[c]
       }
-
       p++
     }
   }
+  ctx.putImageData(imageData, 0, 0)
+}
 
-  ctxOrig.putImageData(imgDataOrig, 0, 0)
-  ctxFftCur.putImageData(imgDataFftCur, 0, 0)
+// オリジナルのフラクタルパターン描画
+const updateOriginalCanvas = (fractalTbl: number[][]) => {
+  const imgData = ctxOrig.getImageData(0, 0, size, size)
+  updateCanvasData(ctxOrig, imgData, (x, y, _p) => {
+    const value = fractalTbl[y][x]
+    return [255 - 255 * value, 255 - 255 * value, 255 - 255 * value, 255]
+  })
+}
 
-  const cvsRenderCurElm = document.getElementById("cvsRenderCur")
+// FFT結果描画（明暗モード切替に対応）
+const updateFFTCanvas = () => {
+  const imgData = ctxFftCur.getImageData(0, 0, size, size)
+  const ampLi = [Math.random(), Math.random(), Math.random()]
+  updateCanvasData(ctxFftCur, imgData, (x, y, p) => {
+    const amplitude = Math.sqrt(re[p] ** 2 + im[p] ** 2)
+    const base = isDark ? 0 : 255
+    const sign = isDark ? 1 : -1
+    return [
+      base + sign * 255 * ampLi[0] * amplitude,
+      base + sign * 255 * ampLi[1] * amplitude,
+      base + sign * 255 * ampLi[2] * amplitude,
+      255,
+    ]
+  })
+}
 
-  if (!(cvsRenderCurElm instanceof HTMLCanvasElement)) {
-    throw new Error("cvsRenderCur is not a canvas element")
-  }
-
-  cvsRenderCurElm.width = window.innerWidth * dpr
-  cvsRenderCurElm.height = window.innerHeight * dpr
-  cvsRenderCurElm.style.width = `${window.innerWidth}px`
-  cvsRenderCurElm.style.height = `${window.innerHeight}px`
-
-  if (!(cvsRenderCurElm instanceof HTMLCanvasElement)) {
-    throw new Error("cvsRenderCur is not a canvas element")
-  }
-  const cvsRenderPrevElm = document.getElementById("cvsRenderPrev")
-  if (!(cvsRenderPrevElm instanceof HTMLCanvasElement)) {
-    throw new Error("cvsRenderPrev is not a canvas element")
-  }
-
+// レンダリング用CanvasにFFTパターンを適用
+const renderPattern = () => {
+  resizeCanvas()
   const ctxRenderCur = cvsRenderCurElm.getContext("2d")
-  if (!ctxRenderCur) {
-    throw new Error("cvsRenderCur context is null")
-  }
+  const ctxRenderPrev = cvsRenderPrevElm.getContext("2d")
+  if (!ctxRenderCur) throw new Error("cvsRenderCur context is null")
+  if (!ctxRenderPrev) throw new Error("cvsRenderPrev context is null")
 
   const patternCur = ctxRenderCur.createPattern(fftCurCvsElm, "repeat")
-  if (!patternCur) {
-    throw new Error("Failed to create pattern for fftCurCvsElm")
-  }
+  if (!patternCur) throw new Error("Failed to create pattern for fftCurCvsElm")
   ctxRenderCur.fillStyle = patternCur
   ctxRenderCur.fillRect(0, 0, cvsRenderCurElm.width, cvsRenderCurElm.height)
+}
 
+// メイン描画処理（再帰的タイマーで更新）
+const draw = () => {
+  const fractalTbl = generateFractal()
+  performFFT()
+  updateOriginalCanvas(fractalTbl)
+  updateFFTCanvas()
+  renderPattern()
   timeout = setTimeout(draw, duration)
+}
 
-  cvsRenderCurElm.onclick = () => {
-    isDark = !isDark
-    clearTimeout(timeout)
-    draw()
-  }
+// クリックイベントは初期化時に一度だけ設定
+cvsRenderCurElm.onclick = () => {
+  isDark = !isDark
+  clearTimeout(timeout)
+  draw()
 }
 
 globalThis.onresize = () => {
   resizeCanvas()
 }
 resizeCanvas()
-
 draw()
