@@ -9,4 +9,5 @@ export default defineConfig({
   plugins: [
     nodePolyfills(), // this is necessary to avoid "process is not defined issue"
   ],
+  base: "/carpet-fourier/",
 })
