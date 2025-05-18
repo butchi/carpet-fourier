@@ -20,6 +20,8 @@ const im = new Float32Array(size ** 2)
 const origCvsElm = document.getElementById("cvsOrig")
 const fftCurCvsElm = document.getElementById("cvsCur")
 
+const dpr = window.devicePixelRatio || 1
+
 if (!(origCvsElm instanceof HTMLCanvasElement)) {
   throw new Error("cvsOrig is not a canvas element")
 }
@@ -29,9 +31,13 @@ if (!(fftCurCvsElm instanceof HTMLCanvasElement)) {
 
 origCvsElm.width = size
 origCvsElm.height = size
+origCvsElm.style.width = `${size}px`
+origCvsElm.style.height = `${size}px`
+
 fftCurCvsElm.width = size
 fftCurCvsElm.height = size
-
+fftCurCvsElm.style.width = `${size}px`
+fftCurCvsElm.style.height = `${size}px`
 
 const ctxOrig = origCvsElm.getContext("2d")
 const ctxFftCur = fftCurCvsElm.getContext("2d")
@@ -42,7 +48,6 @@ if (!ctxOrig) {
 if (!ctxFftCur) {
   throw new Error("cvsCur context is null")
 }
-
 
 const initTbl = [...Array(initSize)].map(_ => {
   return Array(initSize).fill(0)
@@ -76,12 +81,16 @@ const resizeCanvas = () => {
     "cvsRenderPrev"
   ) as HTMLCanvasElement
   if (cvsRenderCurElm) {
-    cvsRenderCurElm.width = w
-    cvsRenderCurElm.height = h
+    cvsRenderCurElm.width = w * dpr
+    cvsRenderCurElm.height = h * dpr
+    cvsRenderCurElm.style.width = `${w}px`
+    cvsRenderCurElm.style.height = `${h}px`
   }
   if (cvsRenderPrevElm) {
-    cvsRenderPrevElm.width = w
-    cvsRenderPrevElm.height = h
+    cvsRenderPrevElm.width = w * dpr
+    cvsRenderPrevElm.height = h * dpr
+    cvsRenderPrevElm.style.width = `${w}px`
+    cvsRenderPrevElm.style.height = `${h}px`
   }
 }
 
@@ -170,8 +179,10 @@ const draw = () => {
     throw new Error("cvsRenderCur is not a canvas element")
   }
 
-  cvsRenderCurElm.width = window.innerWidth
-  cvsRenderCurElm.height = window.innerHeight
+  cvsRenderCurElm.width = window.innerWidth * dpr
+  cvsRenderCurElm.height = window.innerHeight * dpr
+  cvsRenderCurElm.style.width = `${window.innerWidth}px`
+  cvsRenderCurElm.style.height = `${window.innerHeight}px`
 
   if (!(cvsRenderCurElm instanceof HTMLCanvasElement)) {
     throw new Error("cvsRenderCur is not a canvas element")
@@ -188,7 +199,7 @@ const draw = () => {
 
   const patternCur = ctxRenderCur.createPattern(fftCurCvsElm, "repeat")
   if (!patternCur) {
-      throw new Error("Failed to create pattern for fftCurCvsElm");
+    throw new Error("Failed to create pattern for fftCurCvsElm")
   }
   ctxRenderCur.fillStyle = patternCur
   ctxRenderCur.fillRect(0, 0, cvsRenderCurElm.width, cvsRenderCurElm.height)
